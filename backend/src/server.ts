@@ -15,7 +15,7 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 
 const defaultOrigins = [
-  "https://blog-generator-jet.vercel.app",
+  "https://blog-generator-c4hg.vercel.app/",
   "http://localhost:3000",
 ];
 
