@@ -33,7 +33,7 @@ export const loginUser = async (req: Request, res: Response) => {
   try {
     const { email, password } = req.body;
 
-    console.log("Request body:", req.body);
+    // console.log("Request body:", req.body);
 
     const user = await User.findOne({ email });
 
@@ -58,12 +58,18 @@ export const loginUser = async (req: Request, res: Response) => {
       { expiresIn: "7d" }
     );
 
+    const isProd = process.env.NODE_ENV === "production";
+    const secureCookie = process.env.COOKIE_SECURE
+      ? process.env.COOKIE_SECURE === "true"
+      : isProd;
+    const sameSite = secureCookie ? "none" : "lax";
+
     // Set the cookie. For cross-site cookies (frontend and backend on different origins)
     // SameSite must be 'none' and secure must be true. In development we use 'lax'.
     res.cookie("token", token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+      secure: secureCookie,
+      sameSite,
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 
@@ -85,10 +91,14 @@ export const logoutUser = async (req: Request, res: Response) => {
   try {
     // Clear the cookie using matching attributes
     const isProd = process.env.NODE_ENV === "production";
+    const secureCookie = process.env.COOKIE_SECURE
+      ? process.env.COOKIE_SECURE === "true"
+      : isProd;
+    const sameSite = secureCookie ? "none" : "lax";
     res.clearCookie("token", {
       httpOnly: true,
-      secure: isProd,
-      sameSite: isProd ? "none" : "lax",
+      secure: secureCookie,
+      sameSite,
       path: "/",
     });
 

@@ -26,9 +26,8 @@ export const registerUser = async (req, res) => {
 export const loginUser = async (req, res) => {
     try {
         const { email, password } = req.body;
-        console.log("Request body:", req.body);
+        // console.log("Request body:", req.body);
         const user = await User.findOne({ email });
-        console.log("Fetched user:", user);
         if (!user) {
             return res
                 .status(404)
@@ -42,11 +41,17 @@ export const loginUser = async (req, res) => {
         }
         //generate the token
         const token = jwt.sign({ id: user._id, email: user.email }, process.env.JWT_SECRET, { expiresIn: "7d" });
-        //set the cookie
+        const isProd = process.env.NODE_ENV === "production";
+        const secureCookie = process.env.COOKIE_SECURE
+            ? process.env.COOKIE_SECURE === "true"
+            : isProd;
+        const sameSite = secureCookie ? "none" : "lax";
+        // Set the cookie. For cross-site cookies (frontend and backend on different origins)
+        // SameSite must be 'none' and secure must be true. In development we use 'lax'.
         res.cookie("token", token, {
             httpOnly: true,
-            secure: process.env.NODE_ENV === "production",
-            sameSite: "strict",
+            secure: secureCookie,
+            sameSite,
             maxAge: 7 * 24 * 60 * 60 * 1000,
         });
         return res.status(200).json({
@@ -65,17 +70,28 @@ export const loginUser = async (req, res) => {
 };
 export const logoutUser = async (req, res) => {
     try {
+        // Clear the cookie using matching attributes
+        const isProd = process.env.NODE_ENV === "production";
+        const secureCookie = process.env.COOKIE_SECURE
+            ? process.env.COOKIE_SECURE === "true"
+            : isProd;
+        const sameSite = secureCookie ? "none" : "lax";
         res.clearCookie("token", {
             httpOnly: true,
-            secure: process.env.NODE_ENV === "production",
-            sameSite: "none",
+            secure: secureCookie,
+            sameSite,
+            path: "/",
+        });
+        return res.status(200).json({
+            success: true,
+            message: "Logged out successfully",
         });
     }
     catch (error) {
         console.log("error in logout controller", error);
         return res
             .status(500)
-            .json({ success: true, message: "Internal server error" });
+            .json({ success: false, message: "Internal server error" }); // Fixed: changed success to false for error case
     }
 };
 export const getProfile = async (req, res) => {

@@ -7,6 +7,7 @@ import { Button } from "./ui/button";
 import { useRouter } from "next/navigation";
 import { useUserStore } from "@/store/userStore";
 import { Badge } from "./ui/badge";
+import { ThemeToggle } from "./theme-toggle";
 
 const Navbar = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -24,7 +25,7 @@ const Navbar = () => {
 
   return (
     <>
-      <nav className="sticky top-0 z-50 bg-white/95 backdrop-blur-xl border-b border-gray-100/50 shadow-sm">
+      <nav className="sticky top-0 z-50 bg-white/95 dark:bg-gray-950/95 backdrop-blur-xl border-b border-gray-100/50 dark:border-gray-800 shadow-sm transition-colors">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             {/* Logo */}
@@ -44,7 +45,7 @@ const Navbar = () => {
                 <Link
                   key={item.id}
                   href={item.path}
-                  className="relative group text-gray-600 hover:text-gray-900 font-medium transition-colors duration-200"
+                  className="relative group text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white font-medium transition-colors duration-200"
                 >
                   {item.name}
                   <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-linear-to-r from-blue-500 to-purple-600 transition-all duration-300 group-hover:w-full"></span>
@@ -54,10 +55,11 @@ const Navbar = () => {
 
             {/* Desktop Buttons */}
             <div className="hidden md:flex items-center gap-3">
+              <ThemeToggle />
               {user && (
                 <Badge
                   variant="secondary"
-                  className="px-3 py-1.5 text-sm font-medium bg-linear-to-r from-blue-50 to-purple-50 text-gray-700 border border-gray-200"
+                  className="px-3 py-1.5 text-sm font-medium bg-linear-to-r from-blue-50 to-purple-50 dark:from-blue-900/30 dark:to-purple-900/30 text-gray-700 dark:text-gray-200 border border-gray-200 dark:border-gray-800"
                 >
                   👋 {user.name}
                 </Badge>
@@ -91,26 +93,32 @@ const Navbar = () => {
             </div>
 
             {/* Mobile menu button */}
-            <button
-              onClick={() => setIsMenuOpen(!isMenuOpen)}
-              className="md:hidden p-2 rounded-lg hover:bg-gray-100 transition-colors duration-200"
-            >
-              {isMenuOpen ? <X size={24} /> : <Menu size={24} />}
-            </button>
+            <div className="md:hidden flex items-center gap-2">
+              <ThemeToggle />
+              <button
+                onClick={() => setIsMenuOpen(!isMenuOpen)}
+                className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-300 transition-colors duration-200"
+              >
+                {isMenuOpen ? <X size={24} /> : <Menu size={24} />}
+              </button>
+            </div>
           </div>
         </div>
 
         {/* Mobile Navigation */}
         {isMenuOpen && (
-          <div className="md:hidden border-t border-gray-100 bg-white/95 backdrop-blur-xl">
+          <div className="md:hidden border-t border-gray-100 dark:border-gray-800 bg-white/95 dark:bg-gray-950/95 backdrop-blur-xl">
             <div className="px-4 pt-2 pb-4 space-y-3">
+              <div className="px-4 py-2 flex justify-end">
+                <ThemeToggle />
+              </div>
               {/* Mobile Navigation Links */}
               {items.map((item) => (
                 <Link
                   key={item.id}
                   href={item.path}
                   onClick={() => setIsMenuOpen(false)}
-                  className="block px-4 py-3 text-gray-700 hover:text-gray-900 font-medium rounded-lg hover:bg-gray-50 transition-all duration-200"
+                  className="block px-4 py-3 text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white font-medium rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-all duration-200"
                 >
                   {item.name}
                 </Link>

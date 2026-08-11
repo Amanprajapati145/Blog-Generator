@@ -35,14 +35,13 @@ const Footer = () => {
   };
 
   const socialLinks = [
-    { icon: Twitter, href: "https://x.com/surajgzp371", label: "Twitter" },
     {
       icon: Linkedin,
-      href: "https://www.linkedin.com/in/suraj-kushwaha-a696a8258/",
+      href: "http://www.linkedin.com/in/aman-prajapati-192058370",
       label: "LinkedIn",
     },
-    { icon: Github, href: "https://github.com/suraj371k", label: "GitHub" },
-    { icon: Mail, href: "mailto:surajkushwaha371@gmail.com", label: "Email" },
+    { icon: Github, href: "https://github.com/Amanprajapati145", label: "GitHub" },
+    { icon: Mail, href: "mailto:Aman15prajapati@gmail.com", label: "Email" },
   ];
 
   return (

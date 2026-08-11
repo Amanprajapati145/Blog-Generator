@@ -1,29 +1,29 @@
-import mongoose, { Schema } from 'mongoose';
+import mongoose, { Schema } from "mongoose";
 // Mongoose Schema
 const userSchema = new Schema({
     email: {
         type: String,
-        required: [true, 'Email is required'],
+        required: [true, "Email is required"],
         unique: true,
         lowercase: true,
         trim: true,
-        match: [/^\S+@\S+\.\S+$/, 'Please provide a valid email'],
+        match: [/^\S+@\S+\.\S+$/, "Please provide a valid email"],
     },
     password: {
         type: String,
-        required: [true, 'Password is required'],
-        minlength: [6, 'Password must be at least 6 characters'],
+        required: [true, "Password is required"],
+        minlength: [6, "Password must be at least 6 characters"],
     },
     name: {
         type: String,
-        required: [true, 'Name is required'],
+        required: [true, "Name is required"],
         trim: true,
-        maxlength: [50, 'Name cannot exceed 50 characters'],
+        maxlength: [50, "Name cannot exceed 50 characters"],
     },
     plan: {
         type: String,
-        enum: ['free', 'pro', 'enterprise'],
-        default: 'free',
+        enum: ["free", "pro", "enterprise"],
+        default: "free",
     },
     apiUsage: {
         blogsGenerated: {
@@ -42,8 +42,8 @@ const userSchema = new Schema({
     preferences: {
         defaultTone: {
             type: String,
-            enum: ['professional', 'casual', 'technical', 'creative'],
-            default: 'professional',
+            enum: ["professional", "casual", "technical", "creative"],
+            default: "professional",
         },
         defaultLength: {
             type: Number,
@@ -62,7 +62,5 @@ const userSchema = new Schema({
 // Indexes
 userSchema.index({ email: 1 });
 userSchema.index({ plan: 1 });
-// Methods (can be added here)
-// userSchema.methods.comparePassword = async function(password: string) { ... }
-const User = mongoose.model('User', userSchema);
+const User = mongoose.model("User", userSchema);
 export default User;

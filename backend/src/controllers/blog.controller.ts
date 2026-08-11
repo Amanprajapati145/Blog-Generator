@@ -1,9 +1,9 @@
 import { Request, Response } from "express";
 import { PromptTemplate } from "@langchain/core/prompts";
 import { ChatGoogleGenerativeAI } from "@langchain/google-genai";
-import Blog from "../models/blog.model";
-import { blogSchema } from "../schema/blog.schema";
-import GenerationHistory from "../models/history.model";
+import Blog from "../models/blog.model.js";
+import { blogSchema } from "../schema/blog.schema.js";
+import GenerationHistory from "../models/history.model.js";
 
 export const generateBlog = async (req: Request, res: Response) => {
   try {
@@ -58,15 +58,44 @@ export const generateBlog = async (req: Request, res: Response) => {
       content: undefined,
     });
 
-    //  Step 4: Generate with Gemini
-    const model = new ChatGoogleGenerativeAI({
-      model: "gemini-2.5-pro",
-      temperature: 0.7,
-      apiKey: process.env.GEMINI_API_KEY,
-    });
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+      return res.status(500).json({
+        success: false,
+        message: "Gemini API key missing on server",
+      });
+    }
 
+    // Determine desired and fallback models. Use Gemini models available for your key.
+    const desiredModel = process.env.GEMINI_MODEL || "gemini-2.5-flash";
+    const fallbackModel = process.env.GEMINI_MODEL_FALLBACK || "gemini-flash-latest";
+
+    const createModel = (modelName: string) =>
+      new ChatGoogleGenerativeAI({ model: modelName, temperature: 0.7, apiKey });
+
+    let response: any;
     const startTime = Date.now();
-    const response = await model.invoke(formattedPrompt);
+    try {
+      const model = createModel(desiredModel);
+      console.log(`Using model: ${desiredModel}`);
+      response = await model.invoke(formattedPrompt);
+    } catch (err: any) {
+      // If configured model is not available for the API/version, try fallback once.
+      const isModelNotFound =
+        err?.status === 404 ||
+        err?.response?.status === 404 ||
+        (err?.message && String(err.message).includes("is not found"));
+
+      if (isModelNotFound && desiredModel !== fallbackModel) {
+        console.warn(
+          `Model ${desiredModel} not available for generateContent. Retrying with fallback model ${fallbackModel}...`
+        );
+        const fallback = createModel(fallbackModel);
+        response = await fallback.invoke(formattedPrompt);
+      } else {
+        throw err;
+      }
+    }
     const endTime = Date.now();
 
     const generatedContent =
@@ -121,7 +150,7 @@ export const generateBlog = async (req: Request, res: Response) => {
       },
     });
   } catch (error: any) {
-    console.error("❌ Error generating blog:", error);
+    console.error("❌ Error generating blog:", error?.response?.data || error);
 
     if (error.name === "ZodError") {
       return res.status(400).json({
@@ -131,10 +160,15 @@ export const generateBlog = async (req: Request, res: Response) => {
       });
     }
 
-    return res.status(500).json({
+    const status = error?.response?.status || 500;
+    const message =
+      error?.response?.data?.error?.message ||
+      error?.message ||
+      "Failed to generate blog";
+
+    return res.status(status).json({
       success: false,
-      message: "Internal server error",
-      error: error.message,
+      message,
     });
   }
 };

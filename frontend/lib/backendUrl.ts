@@ -1,12 +1,10 @@
 import axios from "axios";
 
-// const backendUrl = axios.create({
-//   baseURL: "http://localhost:5000",
-//   withCredentials: true
-// });
+const baseURL =
+  process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:5000";
 
 const backendUrl = axios.create({
-  baseURL: "https://blog-generator-0ak5.onrender.com",
+  baseURL,
   withCredentials: true,
 });
 

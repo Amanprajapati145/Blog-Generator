@@ -37,14 +37,14 @@ const Signup = () => {
   };
 
   return (
-    <section className="flex items-center justify-center min-h-screen bg-linear-to-br from-blue-50 via-purple-50 to-white px-4">
-      <div className="w-full max-w-md bg-white shadow-lg rounded-2xl p-8 md:p-10 border border-gray-100">
+    <section className="flex items-center justify-center min-h-screen bg-linear-to-br from-blue-50 via-purple-50 to-white dark:from-blue-950 dark:via-purple-950 dark:to-gray-950 px-4 transition-colors">
+      <div className="w-full max-w-md bg-white dark:bg-gray-900 shadow-lg rounded-2xl p-8 md:p-10 border border-gray-100 dark:border-gray-800 transition-colors">
         {/* Heading */}
         <div className="mb-8 text-center">
           <h1 className="text-3xl md:text-4xl font-extrabold bg-linear-to-r from-blue-600 to-purple-700 bg-clip-text text-transparent">
             Register
           </h1>
-          <p className="text-zinc-500 font-medium mt-2">
+          <p className="text-zinc-500 dark:text-zinc-400 font-medium mt-2">
             Register to start generating amazing blogs
           </p>
         </div>
@@ -55,7 +55,7 @@ const Signup = () => {
           <div className="flex flex-col gap-2">
             <Label
               htmlFor="email"
-              className="text-sm font-semibold text-gray-700"
+              className="text-sm font-semibold text-gray-700 dark:text-gray-300"
             >
               Name
             </Label>
@@ -70,7 +70,7 @@ const Signup = () => {
                 placeholder="john doe"
                 {...register("name")}
                 required
-                className="pl-10 h-12 text-base border-gray-300 focus:ring-2 focus:ring-purple-600 focus:border-purple-600 transition-all"
+                className="pl-10 h-12 text-base border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-white focus:ring-2 focus:ring-purple-600 focus:border-purple-600 transition-all"
               />
             </div>
             {errors.name && (
@@ -82,7 +82,7 @@ const Signup = () => {
           <div className="flex flex-col gap-2">
             <Label
               htmlFor="email"
-              className="text-sm font-semibold text-gray-700"
+              className="text-sm font-semibold text-gray-700 dark:text-gray-300"
             >
               Email Address
             </Label>
@@ -97,7 +97,7 @@ const Signup = () => {
                 placeholder="john@gmail.com"
                 {...register("email")}
                 required
-                className="pl-10 h-12 text-base border-gray-300 focus:ring-2 focus:ring-purple-600 focus:border-purple-600 transition-all"
+                className="pl-10 h-12 text-base border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-white focus:ring-2 focus:ring-purple-600 focus:border-purple-600 transition-all"
               />
             </div>
             {errors.email && <p>{errors.email.message}</p>}
@@ -107,7 +107,7 @@ const Signup = () => {
           <div className="flex flex-col gap-2">
             <Label
               htmlFor="password"
-              className="text-sm font-semibold text-gray-700"
+              className="text-sm font-semibold text-gray-700 dark:text-gray-300"
             >
               Password
             </Label>
@@ -122,7 +122,7 @@ const Signup = () => {
                 required
                 placeholder="Enter your password"
                 {...register("password")}
-                className="pl-10 h-12 text-base border-gray-300 focus:ring-2 focus:ring-purple-600 focus:border-purple-600 transition-all"
+                className="pl-10 h-12 text-base border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-white focus:ring-2 focus:ring-purple-600 focus:border-purple-600 transition-all"
               />
             </div>
             {errors.password && <p>{errors.password.message}</p>}
@@ -132,7 +132,7 @@ const Signup = () => {
             {loading ? "Signing up..." : "Sign up"}
           </Button>
 
-          <p className="text-center text-sm text-gray-600">
+          <p className="text-center text-sm text-gray-600 dark:text-gray-400">
             Already have an account?{" "}
             <Link
               href="/login"

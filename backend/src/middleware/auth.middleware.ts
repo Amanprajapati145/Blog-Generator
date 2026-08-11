@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
-import User from "../models/user.model";
+import User from "../models/user.model.js";
 
 export const authenticateMiddleware = async (
   req: Request,
@@ -8,10 +8,16 @@ export const authenticateMiddleware = async (
   next: NextFunction
 ) => {
   try {
-    //  Get token from cookies
-    const token = req.cookies?.token;
+    const cookieToken = req.cookies?.token;
+    const headerToken = req.headers.authorization?.startsWith("Bearer ")
+      ? req.headers.authorization.split(" ")[1]
+      : undefined;
+
+    const token = cookieToken || headerToken;
     if (!token) {
-      return res.status(401).json({ success: false, message: "Unauthorized: No token provided" });
+      return res
+        .status(401)
+        .json({ success: false, message: "Unauthorized: No token provided" });
     }
 
     // Verify token

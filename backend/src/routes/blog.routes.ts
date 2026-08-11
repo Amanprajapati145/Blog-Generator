@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { authenticateMiddleware } from "../middleware/auth.middleware";
+import { authenticateMiddleware } from "../middleware/auth.middleware.js";
 import {
   deleteBlogs,
   generateBlog,
@@ -7,7 +7,7 @@ import {
   getBlogs,
   searchBlog,
   updateBlogs,
-} from "../controllers/blog.controller";
+} from "../controllers/blog.controller.js";
 
 const router = Router();
 

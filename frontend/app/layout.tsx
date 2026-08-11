@@ -6,6 +6,7 @@ import { Toaster } from "react-hot-toast";
 import { useUserStore } from "@/store/userStore";
 import { useEffect } from "react";
 import Footer from "@/components/Footer";
+import { ThemeProvider } from "@/components/theme-provider";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -23,22 +24,33 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const { profile, user } = useUserStore();
+  const { profile, user, initializeAuth, token } = useUserStore();
 
   useEffect(() => {
-    if (!user) {
+    initializeAuth();
+  }, [initializeAuth]);
+
+  useEffect(() => {
+    if (!user && token) {
       profile();
     }
-  }, [profile]);
+  }, [profile, user, token]);
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <Navbar />
-        {children}
-        <Footer />
-        <Toaster />
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          disableTransitionOnChange
+        >
+          <Navbar />
+          {children}
+          <Footer />
+          <Toaster />
+        </ThemeProvider>
       </body>
     </html>
   );

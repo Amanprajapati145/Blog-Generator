@@ -1,31 +1,26 @@
 import { PromptTemplate } from "@langchain/core/prompts";
 import { ChatGoogleGenerativeAI } from "@langchain/google-genai";
-import Blog from "../models/blog.model";
-import { blogSchema } from "../schema/blog.schema";
-import GenerationHistory from "../models/history.model";
+import Blog from "../models/blog.model.js";
+import { blogSchema } from "../schema/blog.schema.js";
+import GenerationHistory from "../models/history.model.js";
 export const generateBlog = async (req, res) => {
     try {
-        // get logged in user
-        const userId = req.user.id;
-        // Step 1: Check if user is authenticated
-        if (!userId) {
+        //  Step 1: Get authenticated user
+        const user = req.user;
+        if (!user) {
             return res.status(401).json({
                 success: false,
-                message: "Unauthorized: User ID not found",
+                message: "Unauthorized: User not found",
             });
         }
-        //  Step 2: Validate blog data (without userId)
+        console.log(user);
+        const userId = user._id || user.id;
+        // Step 2: Validate blog data
         const parsedData = await blogSchema
             .omit({ userId: true })
             .parseAsync(req.body);
         const { title, topic, tone, tags, metaDescription } = parsedData;
-        //  Step 3: Initialize Gemini model
-        const model = new ChatGoogleGenerativeAI({
-            model: "gemini-2.5-pro",
-            temperature: 0.7,
-            apiKey: process.env.GEMINI_API_KEY,
-        });
-        //  Step 4: Create the prompt
+        //  Step 3: Generate prompt
         const template = `
       You are an expert SEO blog writer.
       Write a detailed and SEO-optimized blog post based on the following details.
@@ -40,7 +35,7 @@ export const generateBlog = async (req, res) => {
       - Include headings, bullet points, and examples if relevant.
       - Optimize naturally for search engines (SEO).
       - Keep it engaging, human-like, and easy to read.
-      - If user ask for any technical blog like jwt authentication or something like that give code examples and explain
+      - If user asks for any technical topic like JWT authentication, include code examples.
 
       Output only the final blog content in Markdown format.
     `;
@@ -54,18 +49,47 @@ export const generateBlog = async (req, res) => {
             tone,
             content: undefined,
         });
-        // Step 5: Generate blog using Gemini
-        const response = await model.invoke(formattedPrompt);
+        const apiKey = process.env.GEMINI_API_KEY;
+        if (!apiKey) {
+            return res.status(500).json({
+                success: false,
+                message: "Gemini API key missing on server",
+            });
+        }
+        // Determine desired and fallback models. Use Gemini models available for your key.
+        const desiredModel = process.env.GEMINI_MODEL || "gemini-2.5-flash";
+        const fallbackModel = process.env.GEMINI_MODEL_FALLBACK || "gemini-flash-latest";
+        const createModel = (modelName) => new ChatGoogleGenerativeAI({ model: modelName, temperature: 0.7, apiKey });
+        let response;
+        const startTime = Date.now();
+        try {
+            const model = createModel(desiredModel);
+            console.log(`Using model: ${desiredModel}`);
+            response = await model.invoke(formattedPrompt);
+        }
+        catch (err) {
+            // If configured model is not available for the API/version, try fallback once.
+            const isModelNotFound = err?.status === 404 ||
+                err?.response?.status === 404 ||
+                (err?.message && String(err.message).includes("is not found"));
+            if (isModelNotFound && desiredModel !== fallbackModel) {
+                console.warn(`Model ${desiredModel} not available for generateContent. Retrying with fallback model ${fallbackModel}...`);
+                const fallback = createModel(fallbackModel);
+                response = await fallback.invoke(formattedPrompt);
+            }
+            else {
+                throw err;
+            }
+        }
+        const endTime = Date.now();
         const generatedContent = typeof response.content === "string"
             ? response.content
-            : response.content?.[0]?.text ??
-                response.content?.[0] ??
-                JSON.stringify(response.content);
-        //  Step 6: Compute word count and reading time
+            : response.content?.[0]?.text ?? JSON.stringify(response.content);
+        //  Step 5: Word count & reading time
         const contentStr = typeof generatedContent === "string" ? generatedContent : "";
         const wordCount = contentStr.split(/\s+/).filter(Boolean).length;
-        const readingTime = Math.ceil(wordCount / 200); // average reading speed
-        //  Step 7: Create blog document in MongoDB
+        const readingTime = Math.ceil(wordCount / 200);
+        //  Step 6: Save Blog
         const newBlog = await Blog.create({
             userId,
             title,
@@ -77,13 +101,9 @@ export const generateBlog = async (req, res) => {
             metaDescription,
             tags,
             seoScore: parsedData.seoScore ?? Math.floor(Math.random() * 20) + 80,
-            exportFormats: {
-                markdown: generatedContent,
-            },
+            exportFormats: { markdown: generatedContent },
         });
-        const startTime = Date.now();
-        const endTime = Date.now();
-        // log generation history
+        //  Step 7: Log generation history
         await GenerationHistory.create({
             userId,
             blogId: newBlog._id,
@@ -92,15 +112,23 @@ export const generateBlog = async (req, res) => {
             cost: ((response.usage_metadata?.total_tokens ?? 0) * 0.00002).toFixed(4),
             duration: (endTime - startTime) / 1000,
         });
-        //  Step 8: Respond with success
+        //  Step 8: Update user's API usage
+        user.apiUsage.blogsGenerated += 1;
+        user.apiUsage.wordsGenerated += wordCount;
+        await user.save();
+        //  Step 9: Respond
         return res.status(201).json({
             success: true,
             message: "Blog generated successfully",
             blog: newBlog,
+            usage: {
+                blogsGenerated: user.apiUsage.blogsGenerated,
+                wordsGenerated: user.apiUsage.wordsGenerated,
+            },
         });
     }
     catch (error) {
-        console.error(" Error generating blog:", error);
+        console.error("❌ Error generating blog:", error?.response?.data || error);
         if (error.name === "ZodError") {
             return res.status(400).json({
                 success: false,
@@ -108,10 +136,13 @@ export const generateBlog = async (req, res) => {
                 errors: error.errors,
             });
         }
-        return res.status(500).json({
+        const status = error?.response?.status || 500;
+        const message = error?.response?.data?.error?.message ||
+            error?.message ||
+            "Failed to generate blog";
+        return res.status(status).json({
             success: false,
-            message: "Internal server error",
-            error: error.message,
+            message,
         });
     }
 };
@@ -126,6 +157,11 @@ export const getBlogs = async (req, res) => {
             .sort({ createdAt: -1 })
             .select("-__v");
         let count = rawBlogs.length;
+        // total word count (sum of all blog.wordCount)
+        const totalWords = rawBlogs.reduce((sum, blog) => {
+            const words = blog.wordCount || 0;
+            return sum + words;
+        }, 0);
         const blogs = rawBlogs.map((blog) => ({
             id: blog._id,
             title: blog.title,
@@ -144,6 +180,7 @@ export const getBlogs = async (req, res) => {
         return res.status(200).json({
             success: true,
             message: "blogs fetched successfully",
+            totalWords,
             count,
             blogs,
         });
@@ -222,5 +259,65 @@ export const updateBlogs = async (req, res) => {
         return res
             .status(500)
             .json({ success: false, message: "Internal server error" });
+    }
+};
+export const getBlogById = async (req, res) => {
+    try {
+        const userId = req.user.id;
+        if (!userId) {
+            return res
+                .status(401)
+                .json({ success: false, message: "you are not authorize" });
+        }
+        const { id } = req.params;
+        const blog = await Blog.findById(id);
+        return res.status(200).json({
+            success: true,
+            message: "blog by id fetched successfully",
+            blog,
+        });
+    }
+    catch (error) {
+        console.log("Error in get blog by id controller", error);
+        return res
+            .status(500)
+            .json({ success: false, message: "Internal server error" });
+    }
+};
+export const searchBlog = async (req, res) => {
+    try {
+        const { q: searchQuery, field = "title" } = req.query;
+        if (!searchQuery || typeof searchQuery !== "string") {
+            return res.status(400).json({
+                success: false,
+                message: "Search query is required",
+            });
+        }
+        // Option 1: Search across multiple fields
+        const blogs = await Blog.find({
+            $or: [
+                { title: { $regex: searchQuery, $options: "i" } },
+                { content: { $regex: searchQuery, $options: "i" } },
+                { topic: { $regex: searchQuery, $options: "i" } },
+            ],
+        });
+        if (blogs.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: "No blogs found matching your search",
+            });
+        }
+        return res.status(200).json({
+            success: true,
+            count: blogs.length,
+            blogs,
+        });
+    }
+    catch (error) {
+        console.log("Error in search blog controller", error);
+        return res.status(500).json({
+            success: false,
+            message: "Internal server error",
+        });
     }
 };

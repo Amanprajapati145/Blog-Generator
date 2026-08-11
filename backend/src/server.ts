@@ -14,11 +14,20 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// app.use(cors({ origin: "http://localhost:3000", credentials: true }));
+const defaultOrigins = [
+  "https://blog-generator-jet.vercel.app",
+  "http://localhost:3000",
+];
 
-app.use(
-  cors({ origin: "https://blog-generator-jet.vercel.app", credentials: true })
-);
+const envOrigins = process.env.CORS_ORIGINS
+  ? process.env.CORS_ORIGINS.split(",")
+      .map((origin) => origin.trim())
+      .filter(Boolean)
+  : [];
+
+const allowedOrigins = [...new Set([...defaultOrigins, ...envOrigins])];
+
+app.use(cors({ origin: allowedOrigins, credentials: true }));
 
 app.use(cookieParser());
 app.use(express.json());

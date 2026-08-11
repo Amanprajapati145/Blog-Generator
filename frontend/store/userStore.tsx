@@ -2,6 +2,14 @@ import { create } from "zustand";
 import api from "@/lib/backendUrl";
 import { loginUser, signupUser } from "@/schema/user.schema";
 
+const setAuthHeader = (token: string | null) => {
+  if (token) {
+    api.defaults.headers.common["Authorization"] = `Bearer ${token}`;
+  } else {
+    delete api.defaults.headers.common["Authorization"];
+  }
+};
+
 export interface User {
   _id: string;
   email: string;
@@ -10,20 +18,32 @@ export interface User {
 
 interface UserState {
   user: User | null;
+  token: string | null;
   loading: boolean;
-  error: null;
+  error: string | null;
 
   // actions
   register: (data: signupUser) => Promise<void>;
   login: (data: loginUser) => Promise<void>;
   profile: () => Promise<void>;
   logout: () => Promise<void>;
+  initializeAuth: () => void;
 }
 
 export const useUserStore = create<UserState>((set) => ({
   user: null,
+  token: null,
   loading: false,
   error: null,
+
+  initializeAuth: () => {
+    if (typeof window === "undefined") return;
+    const storedToken = window.localStorage.getItem("token");
+    if (storedToken) {
+      setAuthHeader(storedToken);
+      set({ token: storedToken });
+    }
+  },
 
   register: async (data) => {
     try {
@@ -40,7 +60,15 @@ export const useUserStore = create<UserState>((set) => ({
     try {
       set({ loading: true, error: null });
       const res = await api.post("/api/user/login", data);
-      set({ user: res.data.user, loading: false });
+      const token = res.data.token ?? null;
+
+      if (token && typeof window !== "undefined") {
+        window.localStorage.setItem("token", token);
+      }
+
+      setAuthHeader(token);
+
+      set({ user: res.data.user, token, loading: false });
     } catch (error: any) {
       console.log("Error in login store", error);
       const message =
@@ -69,11 +97,13 @@ export const useUserStore = create<UserState>((set) => ({
       await api.post("/api/user/logout");
 
       // Clear user data from store
-      set({ user: null, loading: false });
+      set({ user: null, token: null, loading: false });
 
       // Clear any cached API state
-      if (api.defaults.headers.common["Authorization"]) {
-        delete api.defaults.headers.common["Authorization"];
+      setAuthHeader(null);
+
+      if (typeof window !== "undefined") {
+        window.localStorage.removeItem("token");
       }
 
       // Force a page reload to clear any cached state
